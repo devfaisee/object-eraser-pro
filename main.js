@@ -575,14 +575,22 @@ function executeInpaintingPipeline() {
       // OpenCV requires mask to be single-channel (GRAY scale)
       cv.cvtColor(mask, mask, cv.COLOR_RGBA2GRAY);
       
+      // OpenCV inpaint requires source to be 8-bit 1-channel or 3-channel (not 4-channel RGBA)
+      let srcRGB = new cv.Mat();
+      cv.cvtColor(src, srcRGB, cv.COLOR_RGBA2RGB);
+      
       // Destination matrix holds result
-      let dst = new cv.Mat();
+      let dstRGB = new cv.Mat();
       
       // 2. Select corresponding method
       const method = state.algorithm === "ns" ? cv.INPAINT_NS : cv.INPAINT_TELEA;
       
       // 3. Execute inpainting computation natively in WebAssembly
-      cv.inpaint(src, mask, dst, state.radius, method);
+      cv.inpaint(srcRGB, mask, dstRGB, state.radius, method);
+      
+      // Convert result back to RGBA
+      let dst = new cv.Mat();
+      cv.cvtColor(dstRGB, dst, cv.COLOR_RGB2RGBA);
       
       // 4. Render output back onto canvases
       cv.imshow(elHiddenSourceCanvas, dst);
@@ -598,6 +606,8 @@ function executeInpaintingPipeline() {
       // 5. Clean up memory allocations immediately (CRITICAL in OpenCV.js!)
       src.delete();
       mask.delete();
+      srcRGB.delete();
+      dstRGB.delete();
       dst.delete();
       
       // 6. Reset drawing masks

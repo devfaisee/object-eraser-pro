@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Object Eraser Pro - Verynt Pro</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <!-- Global Loading screen for OpenCV.js WebAssembly -->
+  <div id="engine-loader" class="loader-overlay">
+    <div class="loader-content">
+      <div class="loader-spinner"></div>
+      <h2>Loading AI Inpainting WebAssembly...</h2>
+      <p>Initializing local OpenCV.js vector pipelines in your browser (0MB server dependency)</p>
+      <div class="progress-bar-wrapper">
+        <div class="progress-bar-fill" id="loader-progress" style="width: 0%;"></div>
+      </div>
+      <span class="loader-status">Downloading WASM components...</span>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- Navbar Header -->
+    <header class="header">
+      <div class="logo-area">
+        <span class="logo-icon">🪄</span>
+        <h1>Verynt <span class="accent-text">EraserPro</span></h1>
+        <span class="badge">100% OFFLINE AI</span>
+      </div>
+      <nav class="navigation">
+        <a href="http://localhost:80" class="back-link">← Portal Hub</a>
+      </nav>
+    </header>
+
+    <!-- Main Workspace Split -->
+    <main class="main-split">
+      
+      <!-- Control Panel (Left Pane) -->
+      <section class="control-panel glass-card">
+        <div class="panel-section">
+          <h2>1. Source Image</h2>
+          <!-- File Drag Drop Zone -->
+          <div class="drag-drop-zone" id="drop-zone">
+            <div class="drop-zone-icon">📸</div>
+            <p class="drop-zone-text">Drag & drop your photo here or <span class="highlight">browse</span></p>
+            <span class="drop-zone-sub">Supports PNG, JPG, WebP up to 16MB</span>
+            <input type="file" id="file-input" accept="image/*" style="display: none;">
+          </div>
+
+          <!-- Image Preview Thumbnail (hidden initially) -->
+          <div class="thumbnail-wrapper" id="thumbnail-wrapper" style="display: none;">
+            <div class="thumbnail-details">
+              <span id="img-name">photo.jpg</span>
+              <span id="img-dims">1200 x 800 px</span>
+            </div>
+            <button class="btn-clear" id="btn-remove-image">❌</button>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <h2>2. Brush Controls</h2>
+          <div class="brush-settings">
+            <div class="slider-group">
+              <div class="slider-header">
+                <label for="range-brush-size">Eraser Brush Size</label>
+                <span id="val-brush-size">25px</span>
+              </div>
+              <input type="range" id="range-brush-size" min="5" max="100" step="1" value="25">
+            </div>
+
+            <!-- Brush Actions -->
+            <div class="brush-mode-row">
+              <button class="mode-btn active" id="btn-mode-draw" title="Draw Mask">
+                🎨 Draw Mask
+              </button>
+              <button class="mode-btn" id="btn-mode-erase" title="Erase Mask">
+                🧹 Brush Eraser
+              </button>
+            </div>
+
+            <div class="action-grid">
+              <button class="btn btn-secondary" id="btn-clear-mask" disabled>
+                🗑️ Clear Mask
+              </button>
+              <button class="btn btn-secondary" id="btn-undo-stroke" disabled>
+                ↩️ Undo Stroke
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <h2>3. AI Engine Settings</h2>
+          <div class="input-group">
+            <label for="algorithm-select">Inpainting Algorithm</label>
+            <select id="algorithm-select">
+              <option value="telea" selected>🌟 Telea (Texture Diffusion - Recommended)</option>
+              <option value="ns">🌊 Navier-Stokes (Structural Blending)</option>
+            </select>
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-header">
+              <label for="range-inpaint-radius">Blending Precision Radius</label>
+              <span id="val-inpaint-radius">5px</span>
+            </div>
+            <input type="range" id="range-inpaint-radius" min="1" max="25" step="1" value="5">
+          </div>
+        </div>
+
+        <!-- Carbon Display Ad Sponsor Widget -->
+        <div class="carbon-ad-widget">
+          <div class="carbon-ad-badge">SPONSORED</div>
+          <div class="carbon-ad-content">
+            <div class="carbon-ad-image-placeholder">🎨</div>
+            <div class="carbon-ad-text">
+              <strong>Remove Watermarks?</strong> Get Verynt Premium Eraser for unlimited batch processing!
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Workspace Area (Right Pane) -->
+      <section class="workspace-area">
+        <div class="workspace-card glass-card">
+          <div class="workspace-header">
+            <div class="workspace-title">
+              <span class="status-indicator active"></span>
+              <h3>Interactive Magic Workspace</h3>
+            </div>
+            <div class="workspace-actions">
+              <span class="badge" id="image-status-badge">No Image Loaded</span>
+            </div>
+          </div>
+
+          <!-- Live Canvas viewport -->
+          <div class="editor-viewport" id="editor-viewport">
+            <div class="editor-placeholder" id="editor-placeholder">
+              <span class="placeholder-icon">🪄</span>
+              <h3>No photo loaded yet</h3>
+              <p>Drag an image into the left panel or click browse to start removing unwanted objects locally.</p>
+            </div>
+
+            <!-- Canvas Double-Layer Container -->
+            <div class="canvas-layers-container" id="canvas-layers-container" style="display: none;">
+              <!-- Underlay: The original loaded image -->
+              <canvas id="image-canvas"></canvas>
+              <!-- Overlay: The interactive drawing path & brush stroke -->
+              <canvas id="drawing-canvas"></canvas>
+              
+              <!-- Offscreen canvases (hidden in DOM) for tracking original full resolution -->
+              <canvas id="hidden-mask-canvas" style="display: none;"></canvas>
+              <canvas id="hidden-source-canvas" style="display: none;"></canvas>
+            </div>
+            
+            <!-- Core Loading / Processing Overlay -->
+            <div class="processing-overlay" id="processing-overlay" style="display: none;">
+              <div class="processing-content">
+                <div class="loader-spinner"></div>
+                <h3>AI Magic Eraser at work...</h3>
+                <p>Synthesizing surrounding textures locally via WebAssembly...</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Action Controls -->
+          <div class="action-bar">
+            <button class="btn btn-primary btn-large" id="btn-erase" disabled>
+              <span class="icon">🪄</span> Erase Selected Object
+            </button>
+            <button class="btn btn-accent" id="btn-download" disabled>
+              <span class="icon">💾</span> Download Clean Photo
+            </button>
+          </div>
+        </div>
+
+        <!-- Status Details Bar -->
+        <div class="status-bar-box glass-card">
+          <div class="status-item">
+            <span class="dot green"></span>
+            <span>OpenCV WebAssembly Engine: <strong id="engine-status">Checking...</strong></span>
+          </div>
+          <div class="status-item">
+            <span>Hardware Acceleration: <strong>SIMD Native-WASM</strong></span>
+          </div>
+          <div class="status-item">
+            <span>Processing Cost: <strong>$0.00 / month</strong></span>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- OpenCV WASM script loading -->
+  <script async src="https://cdn.jsdelivr.net/npm/opencv.js-pure@4.3.0/opencv.js" id="opencv-cdn"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
